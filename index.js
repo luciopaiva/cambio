@@ -49,7 +49,8 @@ class Index {
         if (this.previousRawResult) {
             const now = moment();
             const todayInMinutes = now.hour() * 60 + now().minute();
-            if (todayInMinutes < this.startTimeInMinutes || todayInMinutes > this.endTimeInMinutes) {
+            const isWeekend = now.day() === 0 || now.day() === 6;
+            if (todayInMinutes < this.startTimeInMinutes || todayInMinutes > this.endTimeInMinutes || isWeekend) {
                 // let's wait until the next day starts
                 // but keep scheduling, since the clock may be readjusted and we don't want to miss the next window
                 return;
