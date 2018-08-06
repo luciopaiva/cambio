@@ -69,7 +69,7 @@ class Index {
                     menuTemplate.push({ label: `Low       R$ ${parseFloat(result[2].low).toFixed(4)}`});
 
                     menuTemplate.push({ type: "separator" });
-                    menuTemplate.push({ label: "About", click: () => shell.openExternal("https://github.com/luciopaiva") });
+                    menuTemplate.push({ label: "About", click: () => shell.openExternal("https://github.com/luciopaiva/cambio") });
                     menuTemplate.push({ label: "Quit", click: () => app.quit() });
 
                     this.menu = Menu.buildFromTemplate(menuTemplate);
