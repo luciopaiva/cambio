@@ -7,11 +7,16 @@
 <body>
 
 <script>
-    const {ipcRenderer} = require('electron');
+    const {ipcRenderer} = require("electron");
+    const moment = require("moment");
 
     class CotacaoUolWindow {
         constructor() {
             this.iconSize = 32;
+
+            this.wantsLatestRate = true;
+            this.wantsLatestTime = false;
+            this.wantsChart = true;
 
             this.canvas = document.createElement("canvas");
             this.canvas.width = this.iconSize;
@@ -21,27 +26,57 @@
             ipcRenderer.on("dollar", (sender, ...args) => this.generateNewTrayIcon(...args));
         }
 
-        generateNewTrayIcon(dollar, time) {
+        /**
+         * @param {DataPoint[]} points
+         */
+        generateNewTrayIcon(points) {
+            points = points.slice(-16);
+
+            const latest = points[points.length - 1];
+
             this.context.clearRect(0, 0, this.iconSize, this.iconSize);
 
-            // this.context.strokeStyle = "yellow";
-            // this.context.strokeRect(1, 1, this.iconSize - 1, this.iconSize - 1);
+            this.context.fillStyle = "black";
+            this.context.fillRect(0, 0, 32, 32);
 
-            // this.context.fillStyle = "black";
-            // this.context.fillRect(0, 0, 32, 32);
+            if (this.wantsChart && points.length > 1) {
+                const selectedPoints = points.slice(-this.iconSize);  // latest points (as many as there are pixels)
+                const selectedRates = selectedPoints.map(point => point.ask);
+                const min = selectedRates.reduce((min, val) => val < min ? val : min, Number.POSITIVE_INFINITY);
+                const max = selectedRates.reduce((max, val) => val > max ? val : max, Number.NEGATIVE_INFINITY);
+                const gap = max - min;
+
+                const scaleX = i => Math.round(this.iconSize * i / (selectedRates.length - 1));
+                const scaleY = val => gap > 0 ? this.iconSize - Math.round(this.iconSize * (val - min) / gap) : 0;
+
+                this.context.fillStyle = "green";
+                this.context.beginPath();
+                this.context.moveTo(scaleX(0), scaleY(selectedRates[0]));
+                for (let i = 1; i < selectedRates.length; i++) {
+                    const rate = selectedRates[i];
+                    this.context.lineTo(scaleX(i), scaleY(rate));
+                }
+                this.context.lineTo(this.iconSize, this.iconSize);
+                this.context.lineTo(0, this.iconSize);
+                this.context.closePath();
+                this.context.fill();
+            }
 
             this.context.fillStyle = "white";
             this.context.textAlign = "right";
 
-            this.context.font = "16px arial";
-            this.context.fillText(dollar.substr(0, 4), this.iconSize, this.iconSize / 2);
+            if (this.wantsLatestRate) {
+                const dollarStr = latest.ask.toFixed(2);
+                this.context.font = "16px arial";
+                const top = this.wantsLatestTime ? this.iconSize / 2 : this.iconSize * .70;
+                this.context.fillText(dollarStr, this.iconSize, top);
+            }
 
-            this.context.font = "12px arial";
-            this.context.fillText(time, this.iconSize, this.iconSize);
-            // this.context.fillText(dollar, 0, this.iconSize / 2);
-            // this.context.fillText("12", 0, this.iconSize);
-
-            console.info(this.context.measureText(dollar));
+            if (this.wantsLatestTime) {
+                const timeStr = moment(latest.ts).format("HH:mm");
+                this.context.font = "12px arial";
+                this.context.fillText(timeStr, this.iconSize, this.iconSize);
+            }
 
             const dataUrl = this.canvas.toDataURL();
             ipcRenderer.send("tray-icon", dataUrl);

@@ -1,8 +1,10 @@
 
 const
-    {app, BrowserWindow, Tray, nativeImage, ipcMain} = require('electron'),
+    {app, BrowserWindow, Tray, nativeImage, Menu, ipcMain, shell} = require('electron'),
     moment = require("moment"),
     HttpService = require("./http-service");
+
+const REQUEST_URL = "https://cotacoes.economia.uol.com.br/cambioJSONChart.html?type=d&cod=BRL&mt=off";
 
 /**
  * @typedef {Object} DataPoint
@@ -18,7 +20,9 @@ class CotacaoUol {
         this.appWindow.webContents.openDevTools();
 
         this.httpService = new HttpService();
-
+        this.previousRawResult = null;
+        this.tooltip = "";
+        this.menu = null;
         this.tray = null;
 
         this.fetchTimer = null;
@@ -34,28 +38,50 @@ class CotacaoUol {
     }
 
     async fetchDollar() {
-        // ToDo download new dollar conversion rate
+        try {
+            const rawResult = await this.httpService.getText(REQUEST_URL);
 
-        const rawResult = await this.httpService.getText("https://cotacoes.economia.uol.com.br/cambioJSONChart.html?type=d&cod=BRL&mt=off");
-        // const jsonStr = rawResult.replace(/.*grafico\.parseData\((.*?)\);.*/, "$1");
-        const result = JSON.parse(rawResult);
+            if (rawResult !== this.previousRawResult) {  // something's changed; let's update the tray icon and menu context
+                const result = JSON.parse(rawResult);
+                const points = /** @type {DataPoint[]} */ result[1];
 
-        // console.info(JSON.stringify(result, null, 2));
+                if (Array.isArray(points) && points.length > 0) {
+                    const dollar = point => point.ask.toFixed(4);
+                    const time = point => moment(point.ts).format("HH:mm");
+                    const dataPointToStr = point => `${time(point)}     R$ ${dollar(point)}`;
 
-        const dollar = point => point.ask.toFixed(4);
-        const time = point => moment(point.ts).format("HH:mm");
+                    const latest = points[points.length - 1];
+                    // request that the browser window generates a new tray icon image for us
+                    this.appWindow.webContents.send("dollar", points);
 
-        const points = /** @type {DataPoint[]} */ result[1];
-        if (Array.isArray(points) && points.length > 0) {
-            for (const point of points) {
-                console.info(`R$ ${dollar(point)} at ${time(point)}`);
+                    this.tooltip = dataPointToStr(latest);
+
+                    /** @type {Object[]} */
+                    const menuTemplate = points
+                        .slice(-16)  // latest 16 only
+                        .map(dataPointToStr)  // stringify
+                        .map(str => { return { label: str }; })  // make menu sub item
+                        .reverse();  // most recent on top
+
+                    menuTemplate.push({ type: "separator" });
+                    menuTemplate.push({ label: `High      R$ ${result[2].high}`});
+                    menuTemplate.push({ label: `Low       R$ ${result[2].low}`});
+                    menuTemplate.push({ label: `Time      ${moment(result[2].timestamp).format("HH:mm")}`});
+
+                    menuTemplate.push({ type: "separator" });
+                    menuTemplate.push({ label: "About", click: () => shell.openExternal("https://github.com/luciopaiva") });
+
+                    this.menu = Menu.buildFromTemplate(menuTemplate);
+
+                    // it was a good response, so cache it
+                    this.previousRawResult = rawResult;
+                }
             }
-
-            const latest = points[points.length - 1];
-            this.appWindow.webContents.send("dollar", dollar(latest), time(latest));
+        } catch (e) {
+            // no problem, will try again in a minute
         }
 
-        this.fetchTimer = setTimeout(this.fetchDollar.bind(this), 10000);
+        this.fetchTimer = setTimeout(this.fetchDollar.bind(this), 60000);
     }
 
     updateTrayIcon(sender, iconDataUrl) {
@@ -65,20 +91,9 @@ class CotacaoUol {
         } else {
             this.tray = new Tray(image);
         }
+        this.tray.setToolTip(this.tooltip);
+        this.tray.setContextMenu(this.menu);
     }
 }
 
 app.on("ready", () => new CotacaoUol());
-
-
-function run() {
-    // tray.on('click', () => {
-    //     win.isVisible() ? win.hide() : win.show()
-    // });
-    // win.on('show', () => {
-    //     tray.setHighlightMode('always')
-    // });
-    // win.on('hide', () => {
-    //     tray.setHighlightMode('never')
-    // });
-}
