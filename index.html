@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Cotação dólar</title>
+</head>
+<body>
+
+<script>
+    const {ipcRenderer} = require('electron');
+
+    class CotacaoUolWindow {
+        constructor() {
+            this.iconSize = 32;
+
+            this.canvas = document.createElement("canvas");
+            this.canvas.width = this.iconSize;
+            this.canvas.height = this.iconSize;
+            this.context = this.canvas.getContext("2d");
+
+            ipcRenderer.on("dollar", (sender, ...args) => this.generateNewTrayIcon(...args));
+        }
+
+        generateNewTrayIcon(dollar, time) {
+            this.context.clearRect(0, 0, this.iconSize, this.iconSize);
+
+            // this.context.strokeStyle = "yellow";
+            // this.context.strokeRect(1, 1, this.iconSize - 1, this.iconSize - 1);
+
+            // this.context.fillStyle = "black";
+            // this.context.fillRect(0, 0, 32, 32);
+
+            this.context.fillStyle = "white";
+            this.context.textAlign = "right";
+
+            this.context.font = "16px arial";
+            this.context.fillText(dollar.substr(0, 4), this.iconSize, this.iconSize / 2);
+
+            this.context.font = "12px arial";
+            this.context.fillText(time, this.iconSize, this.iconSize);
+            // this.context.fillText(dollar, 0, this.iconSize / 2);
+            // this.context.fillText("12", 0, this.iconSize);
+
+            console.info(this.context.measureText(dollar));
+
+            const dataUrl = this.canvas.toDataURL();
+            ipcRenderer.send("tray-icon", dataUrl);
+        }
+    }
+
+    new CotacaoUolWindow();
+</script>
+
+</body>
+</html>
