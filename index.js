@@ -12,7 +12,7 @@ const REQUEST_URL = "https://cotacoes.economia.uol.com.br/cambioJSONChart.html?t
  * @property {Number} ts
  */
 
-class CotacaoUol {
+class Index {
 
     constructor() {
         this.appWindow = new BrowserWindow({width: 800, height: 600, show: false});
@@ -97,4 +97,4 @@ class CotacaoUol {
     }
 }
 
-app.on("ready", () => new CotacaoUol());
+app.on("ready", () => new Index());
