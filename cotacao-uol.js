@@ -29,6 +29,7 @@ class CotacaoUol {
 
         this.appWindow.on("ready-to-show", this.fetchDollar.bind(this));
         this.appWindow.on("close", this.close.bind(this));
+        app.on("window-all-closed", () => app.quit());
 
         ipcMain.on("tray-icon", this.updateTrayIcon.bind(this));
     }
@@ -69,7 +70,7 @@ class CotacaoUol {
 
                     menuTemplate.push({ type: "separator" });
                     menuTemplate.push({ label: "About", click: () => shell.openExternal("https://github.com/luciopaiva") });
-                    menuTemplate.push({ label: "Quit", click: () => this.appWindow.close() });
+                    menuTemplate.push({ label: "Quit", click: () => app.quit() });
 
                     this.menu = Menu.buildFromTemplate(menuTemplate);
 
