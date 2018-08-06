@@ -7,6 +7,18 @@ A simple Electron app to display current dollar conversion rates. It keeps an ic
 
 Data is updated once a minute, queried from [UOL Economia - Cotações](https://economia.uol.com.br/cotacoes/cambio/dolar-comercial-estados-unidos/).
 
+# Installation
+
+The installation process is currently manual. Make sure you have Node.js installed, clone this repo and run:
+
+    npm install
+
+After that, simply run:
+
+    npm start
+
+And the application should start.
+
 # Endpoint response
 
 This is how the web site calls the endpoint:
