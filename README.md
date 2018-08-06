@@ -1,5 +1,5 @@
 
-# Cotação UOL
+# Câmbio
 
 A simple Electron app to display current dollar conversion rates. It keeps an icon in your system tray showing the latest rate and also a chart showing recent trend. Clicking it shows past rates and that day's high/low:
 
