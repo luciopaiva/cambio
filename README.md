@@ -5,7 +5,7 @@ A simple Electron app to display current dollar conversion rates. It keeps an ic
 
 ![](screenshot.png)
 
-Data is updated once a minute from [UOL Economia - Cotações](https://economia.uol.com.br/cotacoes/cambio/dolar-comercial-estados-unidos/).
+Data is updated once a minute, queried from [UOL Economia - Cotações](https://economia.uol.com.br/cotacoes/cambio/dolar-comercial-estados-unidos/).
 
 # Endpoint response
 
