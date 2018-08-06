@@ -64,12 +64,12 @@ class CotacaoUol {
                         .reverse();  // most recent on top
 
                     menuTemplate.push({ type: "separator" });
-                    menuTemplate.push({ label: `High      R$ ${result[2].high}`});
-                    menuTemplate.push({ label: `Low       R$ ${result[2].low}`});
-                    menuTemplate.push({ label: `Time      ${moment(result[2].timestamp).format("HH:mm")}`});
+                    menuTemplate.push({ label: `High      R$ ${parseFloat(result[2].high).toFixed(4)}`});
+                    menuTemplate.push({ label: `Low       R$ ${parseFloat(result[2].low).toFixed(4)}`});
 
                     menuTemplate.push({ type: "separator" });
                     menuTemplate.push({ label: "About", click: () => shell.openExternal("https://github.com/luciopaiva") });
+                    menuTemplate.push({ label: "Quit", click: () => this.appWindow.close() });
 
                     this.menu = Menu.buildFromTemplate(menuTemplate);
 

@@ -1,11 +1,13 @@
 
 # Cotação UOL
 
-Data taken from [UOL Economia - Cotações](https://economia.uol.com.br/cotacoes/cambio/dolar-comercial-estados-unidos/).
+A simple Electron app to display current dollar conversion rates. It keeps an icon in your system tray showing the latest rate and also a chart showing recent trend. Clicking it shows past rates and that day's high/low:
 
-![](website.png)
+![](screenshot.png)
 
-# Sample response
+Data is updated once a minute from [UOL Economia - Cotações](https://economia.uol.com.br/cotacoes/cambio/dolar-comercial-estados-unidos/).
+
+# Endpoint response
 
 This is how the web site calls the endpoint:
 
