@@ -24,10 +24,12 @@ class Index {
         this.tooltip = "";
         this.menu = null;
         this.tray = null;
+        this.startTimeInMinutes = 8 * 60 + 50;  // fetching starts at 8:50
+        this.endTimeInMinutes = 17 * 60 + 10;   // fetching ends at 17:10
 
         this.fetchTimer = null;
 
-        this.appWindow.on("ready-to-show", this.fetchDollar.bind(this));
+        this.appWindow.on("ready-to-show", this.fetchRates.bind(this));
         this.appWindow.on("close", this.close.bind(this));
         app.on("window-all-closed", () => app.quit());
 
@@ -38,51 +40,75 @@ class Index {
         clearTimeout(this.fetchTimer);
     }
 
-    async fetchDollar() {
+    async fetchRates() {
+        await this.tryFetchRates();
+        this.scheduleNextFetch();
+    }
+
+    async tryFetchRates() {
+        if (this.previousRawResult) {
+            const now = moment();
+            const todayInMinutes = now.hour() * 60 + now().minute();
+            if (todayInMinutes < this.startTimeInMinutes || todayInMinutes > this.endTimeInMinutes) {
+                // let's wait until the next day starts
+                // but keep scheduling, since the clock may be readjusted and we don't want to miss the next window
+                return;
+            }
+        }
+
         try {
             const rawResult = await this.httpService.getText(REQUEST_URL);
 
-            if (rawResult !== this.previousRawResult) {  // something's changed; let's update the tray icon and menu context
-                const result = JSON.parse(rawResult);
-                const points = /** @type {DataPoint[]} */ result[1];
-
-                if (Array.isArray(points) && points.length > 0) {
-                    const dollar = point => point.ask.toFixed(4);
-                    const time = point => moment(point.ts).format("HH:mm");
-                    const dataPointToStr = point => `${time(point)}     R$ ${dollar(point)}`;
-
-                    const latest = points[points.length - 1];
-                    // request that the browser window generates a new tray icon image for us
-                    this.appWindow.webContents.send("dollar", points);
-
-                    this.tooltip = dataPointToStr(latest);
-
-                    /** @type {Object[]} */
-                    const menuTemplate = points
-                        .slice(-16)  // latest 16 only
-                        .map(dataPointToStr)  // stringify
-                        .map(str => { return { label: str }; })  // make menu sub item
-                        .reverse();  // most recent on top
-
-                    menuTemplate.push({ type: "separator" });
-                    menuTemplate.push({ label: `High      R$ ${parseFloat(result[2].high).toFixed(4)}`});
-                    menuTemplate.push({ label: `Low       R$ ${parseFloat(result[2].low).toFixed(4)}`});
-
-                    menuTemplate.push({ type: "separator" });
-                    menuTemplate.push({ label: "About", click: () => shell.openExternal("https://github.com/luciopaiva/cambio") });
-                    menuTemplate.push({ label: "Quit", click: () => app.quit() });
-
-                    this.menu = Menu.buildFromTemplate(menuTemplate);
-
-                    // it was a good response, so cache it
-                    this.previousRawResult = rawResult;
-                }
+            if (rawResult === this.previousRawResult) {
+                // current result is the same as before; nothing to do
+                return;
             }
+
+            // something's changed; let's update the tray icon and menu context
+            const result = JSON.parse(rawResult);
+            const points = /** @type {DataPoint[]} */ result[1];
+
+            if (!(Array.isArray(points) && points.length > 0)) {
+                // no data points; bail out
+                return;
+            }
+
+            const dollar = point => point.ask.toFixed(4);
+            const time = point => moment(point.ts).format("HH:mm");
+            const dataPointToStr = point => `${time(point)}     R$ ${dollar(point)}`;
+            const latest = points[points.length - 1];
+            this.appWindow.webContents.send("dollar", points);
+            this.tooltip = dataPointToStr(latest);
+            /** @type {Object[]} */
+            const menuTemplate = points
+                .slice(-16)  // latest 16 only
+                .map(dataPointToStr)  // stringify
+                .map(str => {
+                    return {label: str};
+                })  // make menu sub item
+                .reverse();
+            menuTemplate.push({type: "separator"});
+            menuTemplate.push({label: `High      R$ ${parseFloat(result[2].high).toFixed(4)}`});
+            menuTemplate.push({label: `Low       R$ ${parseFloat(result[2].low).toFixed(4)}`});
+            menuTemplate.push({type: "separator"});
+            menuTemplate.push({
+                label: "About",
+                click: () => shell.openExternal("https://github.com/luciopaiva/cambio")
+            });
+            menuTemplate.push({label: "Quit", click: () => app.quit()});
+            this.menu = Menu.buildFromTemplate(menuTemplate);
+            this.previousRawResult = rawResult;
+
         } catch (e) {
             // no problem, will try again in a minute
         }
+    }
 
-        this.fetchTimer = setTimeout(this.fetchDollar.bind(this), 60000);
+    scheduleNextFetch() {
+        if (this.fetchTimer) {
+            clearTimeout(this.fetchTimer);
+        }
+        this.fetchTimer = setTimeout(this.fetchRates.bind(this), 60000);
     }
 
     updateTrayIcon(sender, iconDataUrl) {
